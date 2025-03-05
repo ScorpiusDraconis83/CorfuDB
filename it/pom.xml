@@ -31,17 +31,17 @@
             <groupId>com.spotify</groupId>
             <artifactId>docker-client</artifactId>
             <classifier>shaded</classifier>
-            <version>8.11.7</version>
+            <version>8.16.0</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jdk8</artifactId>
-            <version>2.14.0-rc1</version>
+            <version>2.18.2</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-guava</artifactId>
-            <version>2.14.0-rc1</version>
+            <version>2.18.2</version>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
@@ -86,6 +86,9 @@
                     <trimStackTrace>false</trimStackTrace>
                     <!-- Option to generate a file test report or just output the test report to the console. -->
                     <useFile>false</useFile>
+                    <argLine>
+                        --add-opens java.base/java.net=ALL-UNNAMED
+                    </argLine>
                 </configuration>
             </plugin>
         </plugins>
@@ -134,7 +137,10 @@
                         </executions>
                         <configuration>
                             <!--suppress UnresolvedMavenProperty (resolved at runtime) -->
-                            <argLine>${universe.jacoco.args}</argLine>
+                            <argLine>
+                                --add-opens java.base/java.net=ALL-UNNAMED
+                                ${universe.jacoco.args}
+                            </argLine>
                             <skipITs>false</skipITs>
                             <reuseForks>false</reuseForks>
                             <trimStackTrace>false</trimStackTrace>

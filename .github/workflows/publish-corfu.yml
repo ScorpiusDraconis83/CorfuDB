@@ -13,25 +13,26 @@ concurrency:
 jobs:
   publish_corfu_db_artifacts:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: github.event_name == 'push'
 
     env:
       PKG_USERNAME: ${{ secrets.pkg_username }}
       PUBLISH_TOKEN: ${{ secrets.publish_token }}
-      DOCKER_USERNAME: ${{ secrets.docker_username }}
-      DOCKER_PASSWORD: ${{ secrets.docker_password }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 11
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'corretto'
-          java-version: '11'
+          java-version: '17'
           check-latest: true
           cache-dependency-path: '**/pom.xml'
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.docker_password }}" | docker login -u "${{ secrets.docker_username }}" --password-stdin
 
       - name: Cache local Maven repository
         uses: actions/cache@v3
@@ -43,8 +44,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Install Docker
+        run: |
+          for pkg in docker.io docker-ce docker-ce-cli docker-ce-rootless-extras docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
+          curl -fsSL https://get.docker.com -o get-docker.sh
+          sudo sh ./get-docker.sh --version 24.0.9
+          /usr/bin/docker version
+          /usr/bin/docker info
 
       - name: Prepare Corfu
         run: |

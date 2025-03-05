@@ -47,6 +47,9 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.corfudb.common.config.ConfigParamNames.DISABLE_CERT_EXPIRY_CHECK_FILE;
+import static org.corfudb.common.config.ConfigParamNames.DISABLE_FILE_WATCHER;
+import static org.corfudb.security.tls.TlsUtils.CertStoreConfig.KeyStoreConfig.DEFAULT_DISABLE_FILE_WATCHER;
 
 /**
  * This class contains basic functionality for any IT test.
@@ -126,7 +129,11 @@ public class AbstractIT extends AbstractCorfuTest {
         }
 
         shutdownAllCorfuServers(shouldForceKill);
-        FileUtils.cleanDirectory(new File(CORFU_LOG_PATH));
+        try {
+            FileUtils.cleanDirectory(new File(CORFU_LOG_PATH));
+        } catch (Exception e) {
+
+        }
     }
 
     public static String getCodeCoverageCmd() {
@@ -404,6 +411,32 @@ public class AbstractIT extends AbstractCorfuTest {
                 .runServer();
     }
 
+    public Process runReplicationServerWaitInSnapshotApply(int port, String pluginConfigFilePath,
+                                                           int lockLeaseDuration, int waitInSnapshotApplyMs)
+                                                        throws IOException {
+        return new CorfuReplicationServerRunner()
+            .setHost(DEFAULT_HOST)
+            .setPort(port)
+            .setLockLeaseDuration(lockLeaseDuration)
+            .setPluginConfigFilePath(pluginConfigFilePath)
+            .setMsg_size(MSG_SIZE)
+            .setWaitSnapshotApplyMs(waitInSnapshotApplyMs)
+            .runServer();
+    }
+
+    public Process runReplicationServerWaitInNegotiatingState(int port, String pluginConfigFilePath,
+                                                              int lockLeaseDuration, int waitInNegotiatingStateMs)
+                                                            throws IOException {
+        return new CorfuReplicationServerRunner()
+            .setHost(DEFAULT_HOST)
+            .setPort(port)
+            .setLockLeaseDuration(lockLeaseDuration)
+            .setPluginConfigFilePath(pluginConfigFilePath)
+            .setMsg_size(MSG_SIZE)
+            .setWaitInNegotiatingStateMs(waitInNegotiatingStateMs)
+            .runServer();
+    }
+
     public Process runReplicationServerCustomMaxWriteSize(int port,
                                                           String pluginConfigFilePath, int maxWriteSize,
                                                           int maxEntriesApplied) throws IOException {
@@ -573,6 +606,7 @@ public class AbstractIT extends AbstractCorfuTest {
         private String logSizeLimitPercentage = null;
         private String trustStorePassword = null;
         private String disableCertExpiryCheckFile = null;
+        private boolean disableFileWatcher = DEFAULT_DISABLE_FILE_WATCHER;
         private String compressionCodec = null;
         private boolean disableHost = false;
         private String networkInterface = null;
@@ -641,8 +675,12 @@ public class AbstractIT extends AbstractCorfuTest {
                     command.append(" -b");
                 }
                 if (disableCertExpiryCheckFile != null) {
-                    command.append(" --disable-cert-expiry-check-file=").append(disableCertExpiryCheckFile);
+                    command.append(" " + DISABLE_CERT_EXPIRY_CHECK_FILE + "=").append(disableCertExpiryCheckFile);
                 }
+                if (disableFileWatcher) {
+                    command.append(" " + DISABLE_FILE_WATCHER);
+                }
+
             }
 
             if (networkInterface != null) {
@@ -711,6 +749,8 @@ public class AbstractIT extends AbstractCorfuTest {
         private Integer lockLeaseDuration;
         private int maxWriteSize = 0;
         private int maxSnapshotEntriesApplied;
+        private int waitSnapshotApplyMs;
+        private int waitInNegotiatingStateMs;
 
         /**
          * Create a command line string according to the properties set for a Corfu Server
@@ -772,6 +812,14 @@ public class AbstractIT extends AbstractCorfuTest {
 
             if (maxSnapshotEntriesApplied != 0) {
                 command.append(" --max-snapshot-entries-applied=").append(maxSnapshotEntriesApplied);
+            }
+
+            if (waitSnapshotApplyMs != 0) {
+                command.append(" --wait-before-apply-ms=").append(waitSnapshotApplyMs);
+            }
+
+            if (waitInNegotiatingStateMs != 0) {
+                command.append(" --wait-in-negotiating-state-ms=").append(waitInNegotiatingStateMs);
             }
 
             command.append(" -d ").append(logLevel).append(" ")
