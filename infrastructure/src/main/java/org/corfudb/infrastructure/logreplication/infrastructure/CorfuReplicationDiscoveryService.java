@@ -377,9 +377,7 @@ public class CorfuReplicationDiscoveryService implements Runnable, CorfuReplicat
                     .ksPasswordFile((String) serverContext.getServerConfig().get(ConfigParamNames.KEY_STORE_PASS_FILE))
                     .tlsEnabled((Boolean) serverContext.getServerConfig().get("--enable-tls"))
                     .systemDownHandler(() -> System.exit(SYSTEM_EXIT_ERROR_CODE))
-                    // This runtime is used for the LockStore, Metadata Manager and Log Entry Sync, which don't rely
-                    // heavily on the cache (hence can be smaller)
-                    .maxCacheEntries(serverContext.getLogReplicationCacheMaxSize()/2)
+                    .cacheDisabled(true)
                     .maxWriteSize(serverContext.getMaxWriteSize())
                     .build())
                     .parseConfigurationString(localCorfuEndpoint).connect();
@@ -428,7 +426,7 @@ public class CorfuReplicationDiscoveryService implements Runnable, CorfuReplicat
 
         try {
             replicationConfigManager =
-                new LogReplicationConfigManager(runtime, serverContext.getPluginConfigFilePath());
+                new LogReplicationConfigManager(runtime, serverContext);
 
             return new LogReplicationConfig(
                     replicationConfigManager,
@@ -743,7 +741,6 @@ public class CorfuReplicationDiscoveryService implements Runnable, CorfuReplicat
      * @param discoveredTopology new discovered topology
      */
     private void onStandbyClusterAddRemove(TopologyDescriptor discoveredTopology) {
-        log.debug("Standby Cluster has been added or removed");
 
         // We only need to process new standby's if your role is of an ACTIVE cluster
         if (localClusterDescriptor.getRole() == ClusterRole.ACTIVE && replicationManager != null && isLeader.get()) {
@@ -753,8 +750,6 @@ public class CorfuReplicationDiscoveryService implements Runnable, CorfuReplicat
         updateLocalTopology(discoveredTopology);
         updateReplicationManagerTopology(discoveredTopology);
         updateTopologyConfigId(topologyDescriptor.getTopologyConfigId());
-        log.debug("Persist new topologyConfigId {}, cluster id={}, role={}", topologyDescriptor.getTopologyConfigId(),
-                localClusterDescriptor.getClusterId(), localClusterDescriptor.getRole());
     }
 
     /**
